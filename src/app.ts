@@ -5,6 +5,8 @@ import applySecurityMiddleware from "./middlewares/securityMiddleware";
 import errorMiddleware from "./middlewares/errorMiddleware";
 import healthRouter from "./routes/health";
 import cookieParser from "cookie-parser";
+import userRoutes from "./routes/user.routes";
+import resumeAnalysis from "./routes/resumeanalysis.routes";
 
 const app: Application = express();
 
@@ -15,12 +17,14 @@ applySecurityMiddleware(app);
 app.use(cors(corsOptions));
 
 // ── Body Parsers ───────────────────────────────────────────────────────────
-app.use(express.json({ limit: "10kb" }));        // cap payload size
+app.use(express.json({ limit: "10kb" })); // cap payload size
 app.use(cookieParser()); // parse cookies
 app.use(express.urlencoded({ extended: true, limit: "10kb" }));
 
 // ── Routes ─────────────────────────────────────────────────────────────────
 app.use("/api", healthRouter);
+app.use("/api/auth", userRoutes);
+app.use("/api/resume-analyses", resumeAnalysis);
 
 // ── Error Handler (must be last) ───────────────────────────────────────────
 app.use(errorMiddleware);
