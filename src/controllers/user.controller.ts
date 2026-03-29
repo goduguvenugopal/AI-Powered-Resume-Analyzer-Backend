@@ -4,22 +4,16 @@ import admin from "../config/firebase";
 import User from "../models/user.modal";
 import { generateToken } from "../utils/jwt";
 import { setAuthCookie, clearAuthCookie } from "../utils/cookie";
-import {
-  sendSuccess,
-  sendCreated,
-  sendNoContent,
-  sendPaginated,
-} from "../utils/response.utils";
-import { AuthRequest, PaginationQuery } from "../types/user.types";
+import { sendSuccess, sendCreated } from "../utils/response.utils";
+import { AuthRequest } from "../types/user.types";
+import makeError from "../middlewares/makeError";
 
 // ─── Google Auth (Firebase) ───────────────────────────────────────────────────
 export const googleAuth = asyncHandler(async (req: Request, res: Response) => {
   const { idToken } = req.body;
 
   if (!idToken) {
-    const error = new Error("ID Token required") as any;
-    error.status = 400;
-    throw error;
+    throw makeError("ID Token required", 400);
   }
 
   const decoded = await admin.auth().verifyIdToken(idToken);
@@ -40,111 +34,40 @@ export const googleAuth = asyncHandler(async (req: Request, res: Response) => {
   const token = generateToken(user._id.toString());
   setAuthCookie(res, token);
 
-  return sendSuccess(res, user, "Login successful");
+  return sendCreated(res, user, "Login successful");
 });
 
 // ─── Get Logged-in User Profile ───────────────────────────────────────────────
+// No DB re-fetch needed — protect middleware already attaches full user to req.user
 export const getProfile = asyncHandler(
   async (req: AuthRequest, res: Response) => {
-    const user = await User.findById(req.user!._id);
-
-    if (!user) {
-      const error = new Error("User not found") as any;
-      error.status = 404;
-      throw error;
-    }
-
-    return sendSuccess(res, user, "Profile fetched successfully");
+    return sendSuccess(res, req.user, "Profile fetched successfully");
   }
 );
-
-// ─── Get All Users ────────────────────────────────────────────────────────────
-export const getUsers = asyncHandler(async (req: Request, res: Response) => {
-  const query = req.query as PaginationQuery;
-  const page  = Math.max(1, parseInt(query.page  ?? "1",  10));
-  const limit = Math.min(100, Math.max(1, parseInt(query.limit ?? "10", 10)));
-  const skip  = (page - 1) * limit;
-
-  const filter: Record<string, unknown> = {};
-  if (query.search) {
-    filter.$or = [
-      { displayName: { $regex: query.search, $options: "i" } },
-      { email:       { $regex: query.search, $options: "i" } },
-    ];
-  }
-  if (query.isActive !== undefined) {
-    filter.isActive = query.isActive === "true";
-  }
-
-  const [users, total] = await Promise.all([
-    User.find(filter).skip(skip).limit(limit).lean(),
-    User.countDocuments(filter),
-  ]);
-
-  return sendPaginated(res, users, total, page, limit, "Users fetched successfully");
-});
-
-// ─── Get Single User ──────────────────────────────────────────────────────────
-export const getUser = asyncHandler(async (req: Request, res: Response) => {
-  const user = await User.findById(req.params.id);
-
-  if (!user) {
-    const error = new Error("User not found") as any;
-    error.status = 404;
-    throw error;
-  }
-
-  return sendSuccess(res, user, "User fetched successfully");
-});
-
-// ─── Update User ──────────────────────────────────────────────────────────────
-export const updateUser = asyncHandler(async (req: Request, res: Response) => {
-  // Whitelist updatable fields — never let req.body overwrite firebaseUid etc.
-  const { displayName, photoURL, isActive } = req.body;
-  const payload = Object.fromEntries(
-    Object.entries({ displayName, photoURL, isActive }).filter(
-      ([, v]) => v !== undefined
-    )
-  );
-
-  if (Object.keys(payload).length === 0) {
-    const error = new Error("No valid fields provided for update.") as any;
-    error.status = 400;
-    throw error;
-  }
-
-  const user = await User.findByIdAndUpdate(
-    req.params.id,
-    { $set: payload },
-    { new: true, runValidators: true }
-  );
-
-  if (!user) {
-    const error = new Error("User not found") as any;
-    error.status = 404;
-    throw error;
-  }
-
-  return sendSuccess(res, user, "User updated successfully");
-});
-
-// ─── Delete User ──────────────────────────────────────────────────────────────
-export const deleteUser = asyncHandler(async (req: Request, res: Response) => {
-  const user = await User.findByIdAndDelete(req.params.id);
-
-  if (!user) {
-    const error = new Error("User not found") as any;
-    error.status = 404;
-    throw error;
-  }
-
-  return sendNoContent(res);
-});
 
 // ─── Logout ───────────────────────────────────────────────────────────────────
 export const logoutUser = asyncHandler(
   async (_req: Request, res: Response) => {
     clearAuthCookie(res);
     return sendSuccess(res, null, "Logged out successfully");
+  }
+);
+
+// ─── Update My Profile ────────────────────────────────────────────────────────
+export const updateProfile = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const { displayName } = req.body;
+
+    if (!displayName?.trim()) {
+      throw makeError("displayName is required.", 400);
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.user!._id,
+      { $set: { displayName: displayName.trim() } },
+      { new: true, runValidators: true }
+    );
+
+    return sendSuccess(res, user, "Profile updated successfully");
   }
 );

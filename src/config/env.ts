@@ -17,9 +17,7 @@ for (const key of requiredEnvVars) {
   }
 }
 
-const clientUrls = process.env.CLIENT_URLS!
-  .split(",")
-  .map((url) => url.trim());
+const clientUrls = process.env.CLIENT_URLS!.split(",").map((url) => url.trim());
 
 export const config = {
   port: Number(process.env.PORT) || 3000,
@@ -28,6 +26,8 @@ export const config = {
   mongodb_uri: process.env.MONGODB_URI as string,
 
   jwt_secret: process.env.JWT_SECRET as string,
+
+  gemini_api_key: process.env.GEMINI_API_KEY as string,
 
   firebase: {
     projectId: process.env.FIREBASE_PROJECT_ID as string,
