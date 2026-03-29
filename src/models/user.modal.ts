@@ -23,7 +23,5 @@ const UserSchema = new Schema<IUser>(
   { timestamps: true }
 );
 
-// Index for fast lookup by firebaseUid
-UserSchema.index({ firebaseUid: 1 });
-
+ 
 export default mongoose.model<IUser>("User", UserSchema);
