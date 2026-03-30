@@ -15,9 +15,10 @@ import {
 import { AuthRequest } from "../types/user.types";
 import { ResumeAnalysisPaginationQuery } from "../types/resumeAnalysis.types";
 import makeError from "../middlewares/makeError";
-import { analyzeResumeWithGemini } from "../services/gemini.service";
+import { analyzeResumeWithGroq } from "../services/groq.service";
+import { config } from "../config/env";
 
-const LLM_MODEL = "gemini-2.0-flash";
+const LLM_MODEL = config.llm_model;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -38,21 +39,26 @@ const parsePagination = (query: ResumeAnalysisPaginationQuery) => {
 
 const buildScoreFilter = (query: ResumeAnalysisPaginationQuery) => {
   const filter: Record<string, unknown> = {};
-  const scoreMin = query.scoreMin !== undefined ? parseFloat(query.scoreMin) : null;
-  const scoreMax = query.scoreMax !== undefined ? parseFloat(query.scoreMax) : null;
+  const scoreMin =
+    query.scoreMin !== undefined ? parseFloat(query.scoreMin) : null;
+  const scoreMax =
+    query.scoreMax !== undefined ? parseFloat(query.scoreMax) : null;
 
   if (scoreMin !== null && !isNaN(scoreMin)) {
-    filter["llmResponse.score"] = { ...(filter["llmResponse.score"] as object ?? {}), $gte: scoreMin };
+    filter["llmResponse.score"] = {
+      ...((filter["llmResponse.score"] as object) ?? {}),
+      $gte: scoreMin,
+    };
   }
   if (scoreMax !== null && !isNaN(scoreMax)) {
-    filter["llmResponse.score"] = { ...(filter["llmResponse.score"] as object ?? {}), $lte: scoreMax };
+    filter["llmResponse.score"] = {
+      ...((filter["llmResponse.score"] as object) ?? {}),
+      $lte: scoreMax,
+    };
   }
   return filter;
 };
 
-// ─── Gemini Analysis ──────────────────────────────────────────────────────────
-
- 
 // ─── Create Analysis ──────────────────────────────────────────────────────────
 /**
  * POST /api/resume-analyses
@@ -68,7 +74,7 @@ export const createResumeAnalysis = asyncHandler(
       throw makeError("resumeText is required.", 400);
     }
 
-    const llmResponse = await analyzeResumeWithGemini(resumeText.trim());
+    const llmResponse = await analyzeResumeWithGroq(resumeText.trim());
 
     // Basic shape guard after parsing
     if (
@@ -82,14 +88,14 @@ export const createResumeAnalysis = asyncHandler(
     }
 
     const analysis = await ResumeAnalysis.create({
-      userId: req.user!._id,
+      // userId: req.user!._id,
       resumeText: resumeText.trim(),
       llmResponse,
       llmModel: LLM_MODEL,
     });
 
     return sendCreated(res, analysis, "Resume analysis created successfully");
-  }
+  },
 );
 
 // ─── Get My Analyses ──────────────────────────────────────────────────────────
@@ -114,8 +120,15 @@ export const getMyResumeAnalyses = asyncHandler(
       ResumeAnalysis.countDocuments(filter),
     ]);
 
-    return sendPaginated(res, analyses, total, page, limit, "Your analyses fetched successfully");
-  }
+    return sendPaginated(
+      res,
+      analyses,
+      total,
+      page,
+      limit,
+      "Your analyses fetched successfully",
+    );
+  },
 );
 
 // ─── Get Single Analysis ──────────────────────────────────────────────────────
@@ -138,7 +151,7 @@ export const getResumeAnalysisById = asyncHandler(
     }
 
     return sendSuccess(res, analysis, "Analysis fetched successfully");
-  }
+  },
 );
 
 // ─── Delete Single Analysis ───────────────────────────────────────────────────
@@ -157,12 +170,15 @@ export const deleteResumeAnalysis = asyncHandler(
     }
 
     if (analysis.userId.toString() !== req.user!._id.toString()) {
-      throw makeError("You do not have permission to delete this analysis.", 403);
+      throw makeError(
+        "You do not have permission to delete this analysis.",
+        403,
+      );
     }
 
     await analysis.deleteOne();
     return sendNoContent(res);
-  }
+  },
 );
 
 // ─── Delete All My Analyses ───────────────────────────────────────────────────
@@ -174,5 +190,5 @@ export const deleteAllMyResumeAnalyses = asyncHandler(
   async (req: AuthRequest, res: Response, _next: NextFunction) => {
     await ResumeAnalysis.deleteMany({ userId: req.user!._id });
     return sendSuccess(res, null, "All your analyses have been deleted");
-  }
+  },
 );

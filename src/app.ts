@@ -15,6 +15,7 @@ applySecurityMiddleware(app);
 
 // ── CORS ───────────────────────────────────────────────────────────────────
 app.use(cors(corsOptions));
+// app.use(cors())
 
 // ── Body Parsers ───────────────────────────────────────────────────────────
 app.use(express.json({ limit: "10kb" })); // cap payload size
@@ -24,7 +25,7 @@ app.use(express.urlencoded({ extended: true, limit: "10kb" }));
 // ── Routes ─────────────────────────────────────────────────────────────────
 app.use("/api", healthRouter);
 app.use("/api/auth", userRoutes);
-app.use("/api/resume-analyses", resumeAnalysisRoutes);
+app.use("/api/resume", resumeAnalysisRoutes);
 
 // ── Error Handler (must be last) ───────────────────────────────────────────
 app.use(errorMiddleware);

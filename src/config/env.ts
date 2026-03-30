@@ -29,6 +29,10 @@ export const config = {
 
   gemini_api_key: process.env.GEMINI_API_KEY as string,
 
+  groq_api_key: process.env.GROQ_API_KEY as string,
+
+  llm_model: process.env.LLM_MODEL as string,
+
   firebase: {
     projectId: process.env.FIREBASE_PROJECT_ID as string,
     clientEmail: process.env.FIREBASE_CLIENT_EMAIL as string,
@@ -41,6 +45,3 @@ export const config = {
     ...clientUrls,
   ],
 };
-
-
-

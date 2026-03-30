@@ -1,10 +1,12 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import Groq from "groq-sdk";
 import makeError from "../middlewares/makeError";
 import { config } from "../config/env";
 
-const LLM_MODEL = "gemini-2.0-flash-lite";
+const LLM_MODEL = config.llm_model;
 
-export const analyzeResumeWithGemini = async (
+const client = new Groq({ apiKey: config.groq_api_key });
+
+export const analyzeResumeWithGroq = async (
   resumeText: string,
 ): Promise<{
   summary: string;
@@ -13,9 +15,6 @@ export const analyzeResumeWithGemini = async (
   suggestions: string[];
   score: number;
 }> => {
-  const genAI = new GoogleGenerativeAI(config.gemini_api_key);
-  const model = genAI.getGenerativeModel({ model: LLM_MODEL });
-
   const prompt = `
 You are an expert resume reviewer. Analyze the following resume and respond ONLY with a valid JSON object — no markdown, no explanation, no backticks.
 
@@ -34,23 +33,26 @@ ${resumeText}
 
   let raw: string;
   try {
-    const result = await model.generateContent(prompt);
-    raw = result.response.text().trim();
+    const result = await client.chat.completions.create({
+      model: LLM_MODEL,
+      messages: [{ role: "user", content: prompt }],
+    });
+    raw = result.choices[0].message.content!.trim();
   } catch (error: any) {
     console.error(
-      "Gemini raw error:",
+      "Groq raw error:",
       JSON.stringify(error, Object.getOwnPropertyNames(error)),
     );
     if (error?.status === 429) {
       throw makeError(
-        "Resume analysis limit exceeded. Please try again later.",
+        "You've reached your analysis limit. Please try again later.",
         429,
       );
     }
-    throw makeError("Gemini API call failed. Please try again later.", 503);
+    throw makeError("AI analysis failed. Please try again later.", 503);
   }
 
-  // Strip markdown code fences if Gemini adds them despite instructions
+  // Strip markdown code fences if model adds them despite instructions
   const cleaned = raw
     .replace(/^```json\s*/i, "")
     .replace(/```\s*$/, "")
@@ -59,7 +61,7 @@ ${resumeText}
   try {
     return JSON.parse(cleaned);
   } catch {
-    throw makeError("Gemini API call failed. Please try again later.", 503);
+    throw makeError("Failed to parse AI response. Please try again.", 502);
   }
 };
 

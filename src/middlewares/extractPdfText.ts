@@ -1,5 +1,5 @@
 import { Response, NextFunction } from "express";
-const pdfParse = require("pdf-parse");
+import pdfParse from "pdf-parse";
 import { AuthRequest } from "../types/user.types";
 import makeError from "./makeError";
 
@@ -8,7 +8,7 @@ const extractPdfText = async (
   res: Response,
   next: NextFunction,
 ) => {
-  if (!req.file) return next(); // plain text path — controller validates it
+  if (!req.file) return next();
 
   const data = await pdfParse(req.file.buffer);
   if (!data.text?.trim())

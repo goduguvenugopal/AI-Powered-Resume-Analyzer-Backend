@@ -10,7 +10,7 @@ import { protect } from "../middlewares/auth.middleware";
 const router = express.Router();
 
 // 🔐 Auth
-router.post("/auth/google", googleAuth);
+router.post("/google", googleAuth);
 router.post("/logout", protect, logoutUser);
 
 // 👤 Profile

@@ -13,22 +13,11 @@ import extractPdfText from "../middlewares/extractPdfText";
 const router = Router();
 
 router.use(protect);
+ 
+router.route("/analyze").post(upload.single("resume"), extractPdfText, createResumeAnalysis);
 
-/**
- * POST   /api/resume-analyses               → Create                [USER]
- * GET    /api/resume-analyses               → Get all               [USER]
- * GET    /api/resume-analyses/stats         → Aggregate stats       [USER]
- * GET    /api/resume-analyses/me            → My history (sidebar)  [USER]
- * DELETE /api/resume-analyses/me            → Wipe my history       [USER]
- * GET    /api/resume-analyses/user/:userId  → User's history        [USER]
- * GET    /api/resume-analyses/:id           → Single (self only)    [USER]
- * DELETE /api/resume-analyses/:id           → Delete (self only)    [USER]
-*/
+router.route("/history").get(getMyResumeAnalyses).delete(deleteAllMyResumeAnalyses);
 
-router.route("/").post(upload.single("resume"), extractPdfText, createResumeAnalysis);
-
-router.route("/me").get(getMyResumeAnalyses).delete(deleteAllMyResumeAnalyses);
-
-router.route("/:id").get(getResumeAnalysisById).delete(deleteResumeAnalysis);
+router.route("/history/:id").get(getResumeAnalysisById).delete(deleteResumeAnalysis);
 
 export default router;
