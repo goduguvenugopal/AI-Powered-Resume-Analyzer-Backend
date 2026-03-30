@@ -88,7 +88,7 @@ export const createResumeAnalysis = asyncHandler(
     }
 
     const analysis = await ResumeAnalysis.create({
-      // userId: req.user!._id,
+      userId: req.user!._id,
       resumeText: resumeText.trim(),
       llmResponse,
       llmModel: LLM_MODEL,
