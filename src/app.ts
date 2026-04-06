@@ -6,7 +6,7 @@ import errorMiddleware from "./middlewares/errorMiddleware";
 import healthRouter from "./routes/health";
 import cookieParser from "cookie-parser";
 import userRoutes from "./routes/user.routes";
-import resumeAnalysisRoutes from "./routes/resumeanalysis.routes";
+import resumeRoutes from "./routes/resume.routes";
 
 const app: Application = express();
 
@@ -25,7 +25,7 @@ app.use(express.urlencoded({ extended: true, limit: "10kb" }));
 // ── Routes ─────────────────────────────────────────────────────────────────
 app.use("/api", healthRouter);
 app.use("/api/auth", userRoutes);
-app.use("/api/resume", resumeAnalysisRoutes);
+app.use("/api/resume", resumeRoutes);
 
 // ── Error Handler (must be last) ───────────────────────────────────────────
 app.use(errorMiddleware);
